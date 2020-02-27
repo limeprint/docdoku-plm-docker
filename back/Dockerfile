@@ -28,9 +28,7 @@ ARG JWT_KEY=MyVerySecretPhrase
 ARG SESSION_ENABLED=false
 ARG BASIC_AUTH_ENABLED=false
 ARG ES_SERVER_URI=http://localhost:9200
-ARG ES_SERVER_SHARDS=4
-ARG ES_SERVER_AUTO_EXPAND_REPLICAS=0-3
-ARG ES_SERVER_REPLICAS=0
+ARG ES_SERVER_INDEX_PREFIX=local
 ARG ES_SERVER_PWD=changeme
 ARG ES_SERVER_USERNAME=elastic
 ARG ES_SERVER_AWS_SERVICE
@@ -52,12 +50,8 @@ ENV KEYSTORE_PASS changeit
 ENV KEYSTORE_KEY_PASS changeit
 ENV KEYSTORE_TYPE JCEKS
 
-ENV SOLIDWORKS_LICENSE_PATH /opt/plugins/solidworks/license.txt
-ENV SOLIDWORKS_SCHEMA_PATH /opt/plugins/solidworks/schema
-ENV CATIA_LICENSE_PATH /opt/plugins/catia/license.txt
 ENV ASADMIN_PATH ${PAYARA_DIR}/bin
 ENV DOMAIN_DIR /opt/payara/appserver/glassfish/domains/production
-ENV NATIVE_LIBS /opt/native-libs
 
 RUN \
  keytool -genseckey -storetype JCEKS -keyalg AES -keysize 256 -keystore ${KEYSTORE_LOCATION} -storepass ${KEYSTORE_PASS} -keypass ${KEYSTORE_KEY_PASS}
@@ -93,29 +87,23 @@ RUN \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.auth.config.property."session\.enabled"=${SESSION_ENABLED} && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.auth.config.property."basic\.header\.enabled"=${BASIC_AUTH_ENABLED} && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.elasticsearch.config.property.serverUri=${ES_SERVER_URI} && \
- ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.elasticsearch.config.property.number_of_shards=${ES_SERVER_SHARDS} && \
- ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.elasticsearch.config.property.auto_expand_replicas="${ES_SERVER_AUTO_EXPAND_REPLICAS}" && \
- ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.elasticsearch.config.property.number_of_replicas=${ES_SERVER_REPLICAS} && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.elasticsearch.config.property.password=${ES_SERVER_PWD} && \
+ ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.elasticsearch.config.property.indexPrefix=${ES_SERVER_INDEX_PREFIX} && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.elasticsearch.config.property.username=${ES_SERVER_USERNAME} && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.elasticsearch.config.property.awsService=${ES_SERVER_AWS_SERVICE} && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.elasticsearch.config.property.awsRegion=${ES_SERVER_AWS_REGION} && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.elasticsearch.config.property.awsAccessKey=${ES_SERVER_AWS_KEY} && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.elasticsearch.config.property.awsSecretKey=${ES_SERVER_AWS_SECRET} && \
- ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.office.config.property.office_home=8100 && \
- ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.office.config.property.office_port=/var/lib/libreoffice && \
+ ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.office.config.property.office_port=8100 && \
+ ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.office.config.property.office_home=/var/lib/libreoffice && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.security.config.property.keystoreLocation=${KEYSTORE_LOCATION} && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.security.config.property.keystorePass=${KEYSTORE_PASS} && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.security.config.property.keyAlias=${KEYSTORE_KEY_ALIAS} && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.security.config.property.keystoreType=${KEYSTORE_TYPE} && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set resources.custom-resource.security.config.property.keyPass=${KEYSTORE_KEY_PASS} && \
- ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set server.java-config.native-library-path-prefix=${NATIVE_LIBS} && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set configs.config.server-config.admin-service.das-config.autodeploy-enabled=true && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set configs.config.server-config.admin-service.das-config.autodeploy-polling-interval-in-seconds=10 && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} set configs.config.server-config.admin-service.das-config.autodeploy-retry-timeout=10 && \
- ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} create-custom-resource --restype java.lang.String --factoryclass org.glassfish.resources.custom.factory.PrimitivesAndStringFactory --property value=${SOLIDWORKS_LICENSE_PATH} datakit/solidworks/licensePath && \
- ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} create-custom-resource --restype java.lang.String --factoryclass org.glassfish.resources.custom.factory.PrimitivesAndStringFactory --property value=${SOLIDWORKS_SCHEMA_PATH} datakit/solidworks/schemaDir && \
- ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} create-custom-resource --restype java.lang.String --factoryclass org.glassfish.resources.custom.factory.PrimitivesAndStringFactory --property value=${CATIA_LICENSE_PATH} datakit/catia/licensePath && \
  ${ASADMIN_PATH}/asadmin --user=${ADMIN_USER} --passwordfile=${PASSWORD_FILE} stop-domain
 
 VOLUME ["/var/lib/docdoku/vault", "/var/lib/docdoku/conversions"]
