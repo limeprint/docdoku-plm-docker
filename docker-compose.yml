@@ -18,7 +18,7 @@
 #
 # DocDokuPLM platform docker file
 
-version: '2'
+version: '3.7'
 
 services:
 
@@ -37,11 +37,6 @@ services:
 
   # Payara instance - JEE 8 application server
   back:
-    mem_limit: 4g
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
     depends_on:
       - db
       - es
@@ -116,11 +111,6 @@ services:
       - cluster.name=docdokuplm
       - bootstrap.memory_lock=true
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    mem_limit: 1g
     networks:
       - network
     ports:
@@ -138,8 +128,6 @@ services:
        - network
      depends_on:
        - es
-     ports:
-       - 5601:5601
 
   db:
     image: postgres:11.2
@@ -205,17 +193,8 @@ services:
     volumes:
       - ./volumes/vault:/data/vault
       - ./volumes/conversions:/data/conversions
-    depends_on:
-      - kafka
-      - back
-
-  conversion_service_2:
-    image: docdoku/docdoku-plm-conversion-service
-    networks:
-      - network
-    volumes:
-      - ./volumes/vault:/data/vault
-      - ./volumes/conversions:/data/conversions
+      #- ./license/solidworks/license.txt:/opt/plugins/solidworks/license.txt
+      #- ./license/catia/license.txt:/opt/plugins/catia/license.txt
     depends_on:
       - kafka
       - back

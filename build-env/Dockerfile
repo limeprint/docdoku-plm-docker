@@ -46,12 +46,16 @@ RUN \
 	ln -s /usr/local/share/phantomjs-2.1.1-linux-x86_64/bin/phantomjs /usr/local/bin/ && \
     rm phantomjs-2.1.1-linux-x86_64.tar.bz2
 
+ARG USERID
+ARG GROUPID
+
+RUN addgroup --gid $GROUPID dev
+RUN adduser --disabled-password --ingroup dev -u $USERID dev
 RUN mkdir /src && \
-    groupadd -g 1000 dev && \
-    useradd -u 1000 -M -s /bin/bash -d /src dev -g dev && \
-    echo dev:dev | chpasswd && \
-    chown -R dev:dev /src
+    chown -R dev:dev /src && \
+    chmod 775 /src && \
+    chmod g+s /src
 
 USER dev
 
-VOLUME ["/src", "/root/.m2", "/root/.npm"]
+VOLUME ["/src"]

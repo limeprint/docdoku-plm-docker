@@ -87,13 +87,13 @@ init-repo () {
         git clone "${DOCDOKU_PLM_SSH_URL}" "${SOURCES_DIR}/docdoku-plm"
         git clone "${DOCDOKU_WEB_FRONT_SSH_URL}" "${SOURCES_DIR}/docdoku-web-front"
         git clone "${DOCDOKU_PLM_SAMPLE_SSH_URL}" "${SOURCES_DIR}/docdoku-plm-sample-data"
-        git clone "${DOCDOKU_PLM_CONVERSION_SERVICE_SSH_URL}" "${SOURCES_DIR}/docdoku-plm-sconversion-service"
+        git clone "${DOCDOKU_PLM_CONVERSION_SERVICE_SSH_URL}" "${SOURCES_DIR}/docdoku-plm-conversion-service"
     else
         git clone "${EPLMP_HTTPS_URL}" "${SOURCES_DIR}/eplmp"
         git clone "${DOCDOKU_PLM_HTTPS_URL}" "${SOURCES_DIR}/docdoku-plm"
         git clone "${DOCDOKU_WEB_FRONT_HTTPS_URL}" "${SOURCES_DIR}/docdoku-web-front"
         git clone "${DOCDOKU_PLM_SAMPLE_HTTPS_URL}" "${SOURCES_DIR}/docdoku-plm-sample-data"
-        git clone "${DOCDOKU_PLM_CONVERSION_SERVICE_HTTPS_URL}" "${SOURCES_DIR}/docdoku-plm-sconversion-service"
+        git clone "${DOCDOKU_PLM_CONVERSION_SERVICE_HTTPS_URL}" "${SOURCES_DIR}/docdoku-plm-conversion-service"
     fi
 }
 
@@ -117,11 +117,11 @@ build-images (){
     # Build the base payara image with dependencies
     echo "Building base image ..." && \
     docker build -t docdokuplm:payara "${SCRIPT_DIR}/back/payara" && \
-    cd "${SCRIPT_DIR}"/volumes/src/docdoku-plm-conversion-service && \
-    ./build.sh && \
-    cd "${SCRIPT_DIR}"
+    #cd "${SCRIPT_DIR}"/volumes/src/docdoku-plm-conversion-service && \
+    #./build.sh && \
+    cd "${SCRIPT_DIR}" && \
     echo "Building platform components..." && \
-    docker-compose build
+    docker-compose build --build-arg USERID="$(id -u)" --build-arg GROUPID="$(id -g)"
 }
 
 build-artifacts (){
