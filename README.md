@@ -10,6 +10,12 @@ Requirements
 * Docker Compose
 * Git
 
+## Local alias
+
+Add to your `/etc/hosts` file
+
+	127.0.0.1	docdokuplm.local
+
 ## platform-ctl
 
 `platform-ctl` is a command wrapper that aims to ease build, deployment and starting/stopping the whole software stack.
@@ -96,10 +102,6 @@ This will shut down all containers
 	./platform-ctl down
 
 ### Development && Debugging
-
-Add to your `/etc/hosts` file
-
-	127.0.0.1	docdokuplm.local
 
 You can edit the sources in the `volumes/src` folder and work with git as usual. Run the command `git fetch --unshallow` on each repository to get the full history.
 

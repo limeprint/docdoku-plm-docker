@@ -188,6 +188,8 @@ services:
 
   conversion_service:
     image: docdoku/docdoku-plm-conversion-service
+    environment:
+      - JAVA_DEBUG=true
     networks:
       - network
     volumes:
@@ -195,6 +197,8 @@ services:
       - ./volumes/conversions:/data/conversions
       #- ./license/solidworks/license.txt:/opt/plugins/solidworks/license.txt
       #- ./license/catia/license.txt:/opt/plugins/catia/license.txt
+    ports:
+      - 10005:5005
     depends_on:
       - kafka
       - back
