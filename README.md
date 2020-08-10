@@ -12,7 +12,9 @@ Requirements
 
 ## Local alias
 
-Add to your `/etc/hosts` file
+DocDokuPLM needs https, to make it work on your localhost, add an alias.
+
+On linux, add to your `/etc/hosts` file
 
 	127.0.0.1	docdokuplm.local
 

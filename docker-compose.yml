@@ -106,10 +106,11 @@ services:
 
   # ElasticSearch instance
   es:
-    image: docker.elastic.co/elasticsearch/elasticsearch:6.6.1
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.8.0
     environment:
       - cluster.name=docdokuplm
       - bootstrap.memory_lock=true
+      - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     networks:
       - network
@@ -120,7 +121,7 @@ services:
       - es:/usr/share/elasticsearch/data
   # Kibana instance
   kibana:
-     image: docker.elastic.co/kibana/kibana:6.6.1
+     image: docker.elastic.co/kibana/kibana:7.8.0
      environment:
        - SERVER_NAME=kibana
        - ELASTICSEARCH_URL=http://es:9200
@@ -195,10 +196,25 @@ services:
     volumes:
       - ./volumes/vault:/data/vault
       - ./volumes/conversions:/data/conversions
-      #- ./license/solidworks/license.txt:/opt/plugins/solidworks/license.txt
-      #- ./license/catia/license.txt:/opt/plugins/catia/license.txt
     ports:
-      - 10005:5005
+    - 10005:5005
+    depends_on:
+      - kafka
+      - back
+
+  conversion_service_non_standard:
+    image: docdoku/docdoku-plm-conversion-service-non-standard
+    environment:
+      - JAVA_DEBUG=true
+    networks:
+      - network
+    volumes:
+      - ./volumes/vault:/data/vault
+      - ./volumes/conversions:/data/conversions
+      - ./license/solidworks/license.txt:/opt/plugins/solidworks/license.txt
+      - ./license/catia/license.txt:/opt/plugins/catia/license.txt
+    ports:
+      - 10006:5005
     depends_on:
       - kafka
       - back
