@@ -19,7 +19,7 @@
 # along with DocDokuPLM.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-SCRIPT_VERSION=0.0.6
+SCRIPT_VERSION="2.6.0-SNAPSHOT"
 
 # Repositories
 EPLMP_SSH_URL=git@github.com:polarsys/eplmp.git
@@ -47,7 +47,8 @@ dir () {
 }
 
 SCRIPT_DIR="$(dir)"
-SOURCES_DIR="${SCRIPT_DIR}/volumes/src"
+VOLUMES_DIR="${SCRIPT_DIR}/volumes"
+SOURCES_DIR="${VOLUMES_DIR}/src"
 
 quit () {
     echo "$1"
@@ -59,7 +60,7 @@ cd "${SCRIPT_DIR}" || quit "ERROR: Cannot find platform-ctl home directory" -1
 init-volumes () {
     echo "Preparing volumes ..."
     mkdir -p "${SCRIPT_DIR}"/volumes
-    mkdir -p "${SCRIPT_DIR}"/volumes/{vault,dumps,conversions,plugins,native-libs,m2,npm,autodeploy,web-front}
+    mkdir -p "${SCRIPT_DIR}"/volumes/{vault,dumps,conversions,autodeploy}
     chmod a+rwx "${SCRIPT_DIR}"/volumes/autodeploy
     chmod a+rwx "${SCRIPT_DIR}"/volumes/conversions
     chmod a+rwx "${SCRIPT_DIR}"/volumes/dumps
@@ -114,92 +115,16 @@ restart-containers () {
 }
 
 build-images (){
-    # Build the base payara image with dependencies
-    echo "Building base image ..." && \
-    docker build -t docdokuplm:payara "${SCRIPT_DIR}/back/payara" && \
-    #cd "${SCRIPT_DIR}"/volumes/src/docdoku-plm-conversion-service && \
-    #./build.sh && \
-    cd "${SCRIPT_DIR}" && \
-    echo "Building platform components..." && \
-    docker-compose build --build-arg USERID="$(id -u)" --build-arg GROUPID="$(id -g)"
-}
-
-build-artifacts (){
-    echo "Building artifacts ..." 
-    
-    docker-compose run build-env bash -c \
-        "cd /src/docdoku-web-front && npm run build --unsafe-perm --quiet && \
-        mvn clean install -f /src/eplmp/pom.xml && \
-        mvn clean install -f /src/docdoku-plm/pom.xml && \
-        mvn clean install dependency:copy-dependencies -f /src/docdoku-plm-sample-data/pom.xml" && \
-        
-     echo "... done" 
-}
-
-build () {
-  case "$1" in
-  "front")
-     docker-compose run build-env bash -c "cd /src/docdoku-web-front && npm run build --unsafe-perm --quiet"
-      ;;
-  "eplmp")
-     docker-compose run build-env bash -c "mvn clean install -f /src/eplmp/pom.xml"
-      ;;
-  "plm")
-    docker-compose run build-env bash -c "mvn clean install -f /src/docdoku-plm/pom.xml"
-      ;;
-  "sample")
-    docker-compose run build-env bash -c "mvn clean install dependency:copy-dependencies -f /src/docdoku-plm-sample-data/pom.xml"
-      ;;
-  *)
-      echo "Specify target: front, eplmp, plm, sample"
-      ;;
-  esac
-}
-
-deploy () {
-  echo "Deploying artifacts ..."
-
-  case "$1" in
-  "front")
-     deploy-front
-      ;;
-  "eplmp")
-     deploy-eplmp
-      ;;
-  "plm")
-    deploy-plm
-      ;;
-  *)
-      deploy-front
-      deploy-eplmp
-      deploy-plm
-      ;;
-  esac
-
-  echo "Done"
-}
-
-deploy-front () {
-    echo -e "Deploying front"
-    unzip -q -o -d "${SCRIPT_DIR}"/volumes/web-front "${SOURCES_DIR}"/docdoku-web-front/target/docdoku-web-front.zip
+  cd "${SOURCES_DIR}"/eplmp && ./build.sh
+  cd "${SOURCES_DIR}"/docdoku-web-front && ./build.sh
+  #docker-compose build --build-arg USERID="$(id -u)" --build-arg GROUPID="$(id -g)"
 }
 
 deploy-eplmp () {
     echo -e "Deploying EPLMP"
     rm "${SCRIPT_DIR}"/volumes/autodeploy/eplmp-server-ear* 2> /dev/null
     rm "${SCRIPT_DIR}"/volumes/autodeploy/.autodeploystatus/eplmp-server-ear* 2> /dev/null
-    cp "${SOURCES_DIR}/eplmp/eplmp-server/eplmp-server-ear/target/eplmp-server-ear.ear" "${SCRIPT_DIR}/volumes/autodeploy/"
-}
-
-deploy-plm () {
-  echo -e "Deploying PLM plugins"
-  rm "${SCRIPT_DIR}"/volumes/autodeploy/converter* 2> /dev/null
-  rm "${SCRIPT_DIR}"/volumes/autodeploy/importer* 2> /dev/null
-  rm "${SCRIPT_DIR}"/volumes/autodeploy/.autodeploystatus/converter* 2> /dev/null
-  rm "${SCRIPT_DIR}"/volumes/autodeploy/.autodeploystatus/importer* 2> /dev/null
-
-  cp "${SOURCES_DIR}/docdoku-plm/importer-attributes/importer-attributes-ear/target/"*.ear \
-        "${SCRIPT_DIR}/volumes/autodeploy/"
+    cp "${SOURCES_DIR}"/eplmp/eplmp-server/eplmp-server-ear/target/eplmp-server-ear.ear "${SCRIPT_DIR}"/volumes/autodeploy/
 }
 
 logs (){
@@ -207,14 +132,10 @@ logs (){
 }
 
 health (){
-    curl -k https://docdokuplm.local:10080/eplmp-server-rest/api/platform/health
+    curl -k "https://docdokuplm.local:10080/eplmp-server-rest/api/platform/health"
 }
 
-list-apps (){
-    docker-compose exec back /opt/payara41/bin/asadmin --user=admin list-applications
-}
-
-status () {
+stack-status () {
     docker-compose ps
     echo -e ""
     echo -e "To run a command on a container:"
@@ -226,31 +147,22 @@ status () {
     du -hs "${SCRIPT_DIR}/volumes/vault"
 }
 
-run() {
-    cmd="$*"
-    if [ -z "$cmd" ]
-      then
-        echo "No command supplied"
-        usage
-        exit 1
-    fi
-    echo "Running $cmd ..."
-    docker-compose run build-env "${cmd}"
-}
-
-test () {
+e2e-test () {
   case "$1" in
   "front")
-     docker-compose run build-env bash -c "cd /src/docdoku-web-front/tests && node run --casperjs=/usr/bin/casperjs --domain=proxy --port=10081 --protocol=https"
+    cd "${SOURCES_DIR}"/docdoku-web-front/tests && \
+      node run --casperjs=/usr/bin/casperjs --domain=proxy --port=10081 --protocol=https
       ;;
   "api-java")
-     docker-compose run build-env bash -c "cd /src/docdoku-plm/docdoku-api-java && mvn clean test -P running-instance -Denv.LOGIN=test -Denv.PASSWORD=test -Denv.URL=https://docdokuplm.local:10080/eplmp-server-rest/api -Denv.WORKSPACE=apitest -Denv.ROOT_LOGIN=root -Denv.ROOT_PASSWORD=root"
+    cd "${SOURCES_DIR}"/docdoku-plm/docdoku-api-java && \
+      mvn clean test -P running-instance -Denv.LOGIN=test -Denv.PASSWORD=test -Denv.URL=https://docdokuplm.local:10080/eplmp-server-rest/api -Denv.WORKSPACE=apitest -Denv.ROOT_LOGIN=root -Denv.ROOT_PASSWORD=root
       ;;
   "cli")
-     docker-compose run build-env bash -c "cd /src/docdoku-plm/docdoku-cli && mvn clean test -Prunning-instance -Denv.LOGIN=test -Denv.PASSWORD=test -Denv.HOST=back -Denv.CONTEXT_ROOT=/eplmp-server-rest -Denv.PORT=8080 -Denv.WORKSPACE=test -Denv.SSL=false"
+    cd "${SOURCES_DIR}"/docdoku-plm/docdoku-cli && \
+      mvn clean test -Prunning-instance -Denv.LOGIN=test -Denv.PASSWORD=test -Denv.HOST=back -Denv.CONTEXT_ROOT=/eplmp-server-rest -Denv.PORT=8080 -Denv.WORKSPACE=test -Denv.SSL=false
       ;;
   *)
-      echo "Specify target: front, api-java"
+      echo "Target missing or unrecognized. Usage: platform-ctl test <front|api-java|cli>"
       ;;
   esac
 }
@@ -297,36 +209,13 @@ browser () {
       read -r COMMAND
     fi
 
-    if [ "$1" == "dev" ] ; then
-        URL=https://docdokuplm.local:10081
-    else
-        URL=https://docdokuplm.local:10080
-    fi
-
-    bash -c "${COMMAND} ${URL}"
-}
-
-backup-ssl () {
-    mkdir -p "${SCRIPT_DIR}"/volumes/ssl
-    docker cp docdoku-plm-docker_proxy:/etc/nginx/ssl/rootCA.pem "${SCRIPT_DIR}"/volumes/ssl/
-    docker cp docdoku-plm-docker_proxy:/etc/nginx/ssl/cert.crt "${SCRIPT_DIR}"/volumes/ssl/
-    docker cp docdoku-plm-docker_proxy:/etc/nginx/ssl/rootCA.key "${SCRIPT_DIR}"/volumes/ssl/
-    docker cp docdoku-plm-docker_proxy:/etc/nginx/ssl/cert.key "${SCRIPT_DIR}"/volumes/ssl/
-}
-
-restore-ssl () {
-    docker cp "${SCRIPT_DIR}"/volumes/ssl/rootCA.pem docdoku-plm-docker_proxy:/etc/nginx/ssl/
-    docker cp "${SCRIPT_DIR}"/volumes/ssl/rootCA.key docdoku-plm-docker_proxy:/etc/nginx/ssl/
-    docker cp "${SCRIPT_DIR}"/volumes/ssl/cert.crt docdoku-plm-docker_proxy:/etc/nginx/ssl/
-    docker cp "${SCRIPT_DIR}"/volumes/ssl/cert.key docdoku-plm-docker_proxy:/etc/nginx/ssl/
-    docker restart docdoku-plm-docker_proxy
+    bash -c "${COMMAND} https://docdokuplm.local:10080"
 }
 
 insert-sample () {
-  docker-compose run build-env bash -c "\
-   cd /src/docdoku-plm-sample-data && \
-   mvn clean install dependency:copy-dependencies && \
-   java -classpath target/docdoku-plm-sample-data.jar:target/dependency/* com.docdoku.loaders.Main -h http://back:8080/eplmp-server-rest -u $1 -p $2"
+  cd "${SOURCES_DIR}"/docdoku-plm-sample-data && \
+    mvn clean install dependency:copy-dependencies && \
+    java -classpath target/docdoku-plm-sample-data.jar:target/dependency/* com.docdoku.loaders.Main -h http://back:8080/eplmp-server-rest -u "$1" -p "$2"
 }
 
 reset () {
@@ -374,8 +263,6 @@ usage () {
     echo -e ""
     echo -e "  ${GREEN}init-repo [<ssh|https>]${NC}:     Init the repositories to ./volumes/src/"
     echo -e "  ${GREEN}build-images${NC}:                Build the base docker images from docker-compose file"
-    echo -e "  ${GREEN}build-artifacts${NC}:             Build the main artifacts from eplmp and docdoku-plm sources"
-    echo -e "  ${GREEN}build <target>${NC}:              Build  specified artifact (target values: front, eplmp, plm, sample)"
     echo -e "  ${GREEN}test <target>${NC}:               Launch e2e tests. Target values: front, java-api)"
     echo -e "  ${GREEN}deploy [target]${NC}:             Copy the main artifacts to the autodeploy volume. Target values (front, eplmp, plm)"
     echo -e "  ${GREEN}up${NC}:                          Start the containers"
@@ -389,7 +276,6 @@ usage () {
     echo -e "  ${GREEN}create-admin <login> <pwd>${NC}:  Create a new administrator"
     echo -e "  ${GREEN}create-user <login> <pwd>${NC}:   Create a new user"
     echo -e "  ${GREEN}browser${NC}:                     Open your web browser and reach DocDokuPLM"
-    echo -e "  ${GREEN}run <command>'${NC}:              Run a custom command in build-env"
     echo -e "  ${GREEN}asadmin ['command']${NC}:         Run asadmin in payara container (accept commands)"
     echo -e "  ${GREEN}insert-sample <login> <pwd>${NC}: Insert some sample data into a new workspace"
     echo -e "  ${GREEN}recreate [service]${NC}:          Force recreate all services or the supplied service"
@@ -435,7 +321,7 @@ case "$1" in
     health
     ;;
 "status")
-    status
+    stack-status
     ;;
 "apps")
     list-apps
@@ -459,7 +345,7 @@ case "$1" in
     asadmin "$2"
     ;;
 "test")
-    test "$2"
+    e2e-test "$2"
     ;;
 "backup-ssl")
     backup-ssl
@@ -475,6 +361,9 @@ case "$1" in
     ;;
 "recreate")
     recreate "$2"
+    ;;
+"generate-ssl")
+    generate-ssl
     ;;
 *)
     usage

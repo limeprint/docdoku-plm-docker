@@ -22,18 +22,22 @@ version: '3.7'
 
 services:
 
-  # Web front: nginx server on host source files
-  # volumes: static files from web front source on the host.
   front:
-    build:
-      context: ./front
+    image: docdoku/docdoku-web-front:latest
     networks:
       - network
     ports:
-      - 13000:3000
+      - 13000:80
+    environment:
+      - SERVER_SSL=true
+      - SERVER_DOMAIN=docdokuplm.local
+      - SERVER_PORT=10080
+      - SERVER_CONTEXT_PATH=/eplmp-server-rest
+      - SERVER_WS_DOMAIN=docdokuplm.local
+      - CONTEXT_PATH=/
+      - PREFER_LOGIN_WITH=false
     volumes:
-      - ./volumes/web-front:/usr/share/nginx/dist
-      - ./volumes/src/docdoku-web-front/app:/usr/share/nginx/app
+      - ./volumes/src/docdoku-web-front/app:/usr/share/nginx/html
 
   # Payara instance - JEE 8 application server
   back:
@@ -41,35 +45,36 @@ services:
       - db
       - es
       - smtp
-    build:
-      context: ./back
-      args:
-        - DOCDOKU_PLM_CODEBASE=https://docdokuplm.local:10080
-        - HEAP_SIZE=512m
-        - JWT_ENABLED=true
-        - JWT_KEY=MyVerySecretPhrase
-        - SESSION_ENABLED=false
-        - BASIC_AUTH_ENABLED=false
-        - DATABASE_USER=my_user
-        - DATABASE_PWD=my_password
-        - DATABASE_SERVER_NAME=db
-        - DATABASE_NAME=my_db
-        - ES_SERVER_URI=http://es:9200
-        - ES_SERVER_SHARDS=4
-        - ES_SERVER_AUTO_EXPAND_REPLICAS=0-3
-        - ES_SERVER_REPLICAS=0
-        - ES_SERVER_USERNAME=elastic
-        - ES_SERVER_PWD=changeme
-        - SMTP_HOST=smtp
-        - SMTP_PORT=1025
-        - SMTP_USER=user
-        - SMTP_FROM_ADDR=notifications@docdokuplm.local
+    image: polarsys/eplmp-server:latest
+    environment:
+      - DOCDOKU_PLM_CODEBASE=https://docdokuplm.local:10080
+      - HEAP_SIZE=512m
+      - JWT_ENABLED=true
+      - JWT_KEY=MyVerySecretPhrase
+      - SESSION_ENABLED=false
+      - BASIC_AUTH_ENABLED=false
+      - DATABASE_USER=my_user
+      - DATABASE_PWD=my_password
+      - DATABASE_SERVER_NAME=db
+      - DATABASE_NAME=my_db
+      - ES_SERVER_URI=http://es:9200
+      - ES_SERVER_USERNAME=elastic
+      - ES_SERVER_PWD=changeme
+      - ES_PREFIX=docdokuplm-local
+      - KEYSTORE_PASS=changeit
+      - KEYSTORE_KEY_ALIAS=my_key
+      - KEYSTORE_TYPE=
+      - KEYSTORE_KEY_PASS=changeit
+      - SMTP_HOST=smtp
+      - SMTP_PORT=1025
+      - SMTP_USER=user
+      - SMTP_FROM_ADDR=notifications@docdokuplm.local
+      - DEBUG=true
     volumes:
       - ./volumes/autodeploy:/opt/payara/appserver/glassfish/domains/production/autodeploy
       - ./volumes/vault:/var/lib/docdoku/vault
       - ./volumes/conversions:/var/lib/docdoku/conversions
-      - ./volumes/plugins:/opt/plugins
-      - ./volumes/native-libs:/opt/native-libs
+      - ./eplmp/keystore:/opt/payara41/keystore
     networks:
       - network
     ports:
@@ -89,11 +94,10 @@ services:
       - smtp
       - adminer
       - kafka
-    build:
-      context: ./proxy
-      args:
-        - DOMAIN=docdokuplm.local
-        - EMAIL=admin@docdokuplm.local
+    image: nginx:1.19.1-alpine
+    volumes:
+      - ./proxy/default.conf:/etc/nginx/conf.d/default.conf
+      - ./proxy/ssl:/etc/nginx/ssl
     networks:
       - network
     ports:
@@ -143,21 +147,6 @@ services:
       - db:/var/lib/postgresql/data
       - ./volumes/dumps:/var/data/dumps
 
-  # DocDokuPLM build env
-  build-env:
-    build: ./build-env
-    depends_on: 
-      - back
-      - proxy
-    volumes:
-      - ./volumes/src:/src
-      - ./volumes/m2:/root/.m2
-      - ./volumes/npm:/root/.npm
-    networks:
-      - network
-    links:
-      - proxy:docdokuplm.local
-
   # View emails sent by the platform in browser
   smtp:
     image: mailhog/mailhog
@@ -182,6 +171,7 @@ services:
       KAFKA_ADVERTISED_HOST_NAME: kafka
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_CREATE_TOPICS: "CONVERT:1:1"
+      LOG_RETENTION_HOURS: 1
     networks:
       - network
     depends_on:
