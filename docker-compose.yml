@@ -63,7 +63,7 @@ services:
       - ES_PREFIX=docdokuplm-local
       - KEYSTORE_PASS=changeit
       - KEYSTORE_KEY_ALIAS=my_key
-      - KEYSTORE_TYPE=
+      - KEYSTORE_TYPE=PKCS12
       - KEYSTORE_KEY_PASS=changeit
       - SMTP_HOST=smtp
       - SMTP_PORT=1025
