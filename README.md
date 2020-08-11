@@ -12,49 +12,38 @@ Requirements
 
 ## Local alias
 
-DocDokuPLM needs https, to make it work on your localhost, add an alias.
-
-On linux, add to your `/etc/hosts` file
+Add to your `/etc/hosts` file (requires sudo privileges)
 
 	127.0.0.1	docdokuplm.local
 
-## platform-ctl
-
-`platform-ctl` is a command wrapper that aims to ease build, deployment and starting/stopping the whole software stack.
-
-Run `platform-ctl help` to list all commands
-
-### Init and start the platform
+## Pull the source code
 
 First step is to clone the repositories and to create the base images. This may take a while, let's have a coffee break.
 
 You can clone with ssh or https (default).
 
 	./platform-ctl init-repo ssh
-	./platform-ctl build-images
+
+## Build images
 
 Make sure to checkout the branches you want to work with
 
     cd volumes/src/<project>
     git checkout <some_branch> 
 
-Then it's time to package some artifacts
+Then it's time to build the images
 
-    ./platform-ctl build-artifacts
+    ./platform-ctl build-images
 
 Start the platform
 
 	./platform-ctl up
 
-Deploy the artifacts
-
-	./platform-ctl deploy
-
 Launch your browser once artifacts are all deployed
 
-	./platform-ctl browser dev
+	./platform-ctl browser
 
-### Logging and monitoring
+## Logging and monitoring
 
 Get platform health
 
@@ -68,23 +57,7 @@ Output logs from all containers
 
 	./platform-ctl logs
 
-### Build env commands
-
-You can run any command in the build env with
-
-	./platform-ctl run "<command>"
-
-Example
-
-	./platform-ctl run "mvn clean install -f /src/docdoku-plm/pom.xml"
-
-Or open a shell into the container
-
-	./platform-ctl run "bash"
-
-Look at the `build-env/Dockerfile` for more details on the system
-
-### SQL Management
+## SQL Management
 
 You can create an admin account, or users accounts
 
@@ -115,26 +88,25 @@ Available apps and ports on docdokuplm.local
 
 * 14848: payara admin
 * 19009: payara debug
-* 10080: front (dist) + webservices
-* 10081: front (dev) + webservices
+* 10080: front webapp
 * 10082: elasticsearch
 * 10083: kibana
 * 10084: MailHog
 * 10085: Adminer
 
-### Notes
+## Notes
 
-#### Docker-Compose
+### Docker-Compose
 
 For more advanced commands, all `docker-compose` commands are supported. See https://docs.docker.com/compose/reference/ for full details
 
-#### Platform-ctl
+### Platform-ctl
 
 `platform-ctl` can be symlinked or added to your PATH
 
 	(sudo) ln -s /path/to/platform-ctl /usr/bin/
 
-#### Ubuntu and elasticsearch
+### Ubuntu and elasticsearch
 
 If you're using Ubuntu, you may need to increase virtual memory
 
@@ -188,29 +160,25 @@ Or use the application search bar and type Docker
 
 ### Windows
 
-TODO ...
+Refer to official documentation
+
+https://docs.docker.com/docker-for-windows/install/
 
 ## SSL
 
 For local development, you need to trust the self signed certificates.
-
-Copy the certificates from the container to your host
-
-	platform-ctl backup-ssl
 	
-This will copy the certs to ./volumes/ssl/
+Certs are stored in ./proxy/ssl/
 
-To restore saved certs (in case of deploying a new proxy image)
-
-	platform-ctl restore-ssl
 
 ### JVM
 
 The JVM running your Java client SDK applications needs to trust the certificate
 
-	(sudo) keytool -importcert -file cert.crt -keystore $JAVA_HOME/jre/lib/security/cacerts -storepass changeit -noprompt -alias "docdokuplm.local.cert.crt"
-
-	(sudo) keytool -importcert -file rootCA.pem -keystore $JAVA_HOME/jre/lib/security/cacerts -storepass changeit -noprompt -alias "docdokuplm.local.rootCA.pem"
+```
+(sudo) keytool -importcert -file proxy/ssl/cert.crt -keystore $JAVA_HOME/jre/lib/security/cacerts -storepass changeit -noprompt -alias "docdokuplm.local.cert.crt"
+(sudo) keytool -importcert -file proxy/ssl/rootCA.pem -keystore $JAVA_HOME/jre/lib/security/cacerts -storepass changeit -noprompt -alias "docdokuplm.local.rootCA.pem"
+```
 
 ### MacOS
 
@@ -222,10 +190,8 @@ Using ca-certificates
 
 Run as root
 
-	apt-get install ca-certificates
-	cp /host/path/to/certs/* /usr/share/ca-certificates/
-    update-ca-certificates
-
-### Others ...
-
-TODO ...
+```
+apt-get install ca-certificates
+cp proxy/ssl/* /usr/share/ca-certificates/
+update-ca-certificates
+```
