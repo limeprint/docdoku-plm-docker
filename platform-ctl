@@ -117,7 +117,7 @@ restart-containers () {
 build-images (){
   cd "${SOURCES_DIR}"/eplmp && ./build.sh
   cd "${SOURCES_DIR}"/docdoku-web-front && ./build.sh
-  #docker-compose build --build-arg USERID="$(id -u)" --build-arg GROUPID="$(id -g)"
+  cd "${SOURCES_DIR}"/docdoku-plm-conversion-service && ./build.sh
 }
 
 deploy-eplmp () {
