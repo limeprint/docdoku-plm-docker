@@ -28,16 +28,9 @@ services:
       - network
     ports:
       - 13000:80
-    environment:
-      - SERVER_SSL=true
-      - SERVER_DOMAIN=docdokuplm.local
-      - SERVER_PORT=10080
-      - SERVER_CONTEXT_PATH=/eplmp-server-rest
-      - SERVER_WS_DOMAIN=docdokuplm.local
-      - CONTEXT_PATH=/
-      - PREFER_LOGIN_WITH=false
     volumes:
       - ./volumes/src/docdoku-web-front/app:/usr/share/nginx/html
+      - ./front/webapp.properties.json:/usr/share/nginx/html/webapp.properties.json
 
   # Payara instance - JEE 8 application server
   back:
@@ -98,6 +91,7 @@ services:
     volumes:
       - ./proxy/default.conf:/etc/nginx/conf.d/default.conf
       - ./proxy/ssl:/etc/nginx/ssl
+        #      - ./front/webapp.properties.json:/usr/share/nginx/conf/webapp.properties.json
     networks:
       - network
     ports:
@@ -168,6 +162,7 @@ services:
   kafka:
     image: wurstmeister/kafka
     environment:
+      KAFKA_BROKER_ID: 1
       KAFKA_ADVERTISED_HOST_NAME: kafka
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_CREATE_TOPICS: "CONVERT:1:1"

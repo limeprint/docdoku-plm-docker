@@ -1,0 +1,12 @@
+{
+    "server": {
+        "ssl": true,
+        "domain": "docdokuplm.local",
+        "port": 10080,
+        "contextPath": "/eplmp-server-rest",
+        "wsDomain": "docdokuplm.local"
+    },
+    "contextPath": "/",
+    "preferLoginWith": false
+}
+

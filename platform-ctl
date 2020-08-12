@@ -121,10 +121,11 @@ build-images (){
 }
 
 deploy-eplmp () {
-    echo -e "Deploying EPLMP"
+    echo -e "Deploying EPLMP..."
     rm "${SCRIPT_DIR}"/volumes/autodeploy/eplmp-server-ear* 2> /dev/null
     rm "${SCRIPT_DIR}"/volumes/autodeploy/.autodeploystatus/eplmp-server-ear* 2> /dev/null
     cp "${SOURCES_DIR}"/eplmp/eplmp-server/eplmp-server-ear/target/eplmp-server-ear.ear "${SCRIPT_DIR}"/volumes/autodeploy/
+    echo -e "done."
 }
 
 logs (){
@@ -151,11 +152,11 @@ e2e-test () {
   case "$1" in
   "front")
     cd "${SOURCES_DIR}"/docdoku-web-front/tests && \
-      node run --casperjs=/usr/bin/casperjs --domain=proxy --port=10081 --protocol=https
+      node run --domain=docdokuplm.local --port=10080 --protocol=https
       ;;
   "api-java")
     cd "${SOURCES_DIR}"/docdoku-plm/docdoku-api-java && \
-      mvn clean test -P running-instance -Denv.LOGIN=test -Denv.PASSWORD=test -Denv.URL=https://docdokuplm.local:10080/eplmp-server-rest/api -Denv.WORKSPACE=apitest -Denv.ROOT_LOGIN=root -Denv.ROOT_PASSWORD=root
+      mvn clean test -Prunning-instance -Denv.LOGIN=test -Denv.PASSWORD=test -Denv.URL=https://docdokuplm.local:10080/eplmp-server-rest/api -Denv.WORKSPACE=apitest -Denv.ROOT_LOGIN=root -Denv.ROOT_PASSWORD=root
       ;;
   "cli")
     cd "${SOURCES_DIR}"/docdoku-plm/docdoku-cli && \
@@ -264,7 +265,7 @@ usage () {
     echo -e "  ${GREEN}init-repo [<ssh|https>]${NC}:     Init the repositories to ./volumes/src/"
     echo -e "  ${GREEN}build-images${NC}:                Build the base docker images from docker-compose file"
     echo -e "  ${GREEN}test <target>${NC}:               Launch e2e tests. Target values: front, java-api)"
-    echo -e "  ${GREEN}deploy [target]${NC}:             Copy the main artifacts to the autodeploy volume. Target values (front, eplmp, plm)"
+    echo -e "  ${GREEN}deploy${NC}:                      Autodeploy EPLMP"
     echo -e "  ${GREEN}up${NC}:                          Start the containers"
     echo -e "  ${GREEN}down${NC}:                        Stop the containers"
     echo -e "  ${GREEN}status${NC}:                      Get a status of running images"
@@ -299,7 +300,7 @@ case "$1" in
     build "$2"
     ;;
 "deploy")
-   deploy "$2"
+   deploy-eplmp
     ;;
 "up")
     down && \
